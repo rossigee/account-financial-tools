@@ -5,6 +5,36 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
+class AccountSpreadTemplateAuto(models.Model):
+    _name = "account.spread.template.auto"
+    _inherit = "analytic.mixin"
+    _description = "Auto create spread, based on product/account/analytic"
+
+    template_id = fields.Many2one(
+        comodel_name="account.spread.template",
+        string="Spread Template",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+    company_id = fields.Many2one(
+        related="template_id.company_id",
+        store=True,
+    )
+    name = fields.Char(
+        required=True,
+        default="/",
+    )
+    product_id = fields.Many2one(
+        comodel_name="product.product",
+        string="Product",
+    )
+    account_id = fields.Many2one(
+        comodel_name="account.account",
+        string="Account",
+    )
+
+
 class AccountSpreadTemplate(models.Model):
     _name = "account.spread.template"
     _inherit = "analytic.mixin"
@@ -147,33 +177,3 @@ class AccountSpreadTemplate(models.Model):
 
         spread_vals["invoice_type"] = invoice_type
         return spread_vals
-
-
-class AccountSpreadTemplateAuto(models.Model):
-    _name = "account.spread.template.auto"
-    _inherit = "analytic.mixin"
-    _description = "Auto create spread, based on product/account/analytic"
-
-    template_id = fields.Many2one(
-        comodel_name="account.spread.template",
-        string="Spread Template",
-        required=True,
-        ondelete="cascade",
-        index=True,
-    )
-    company_id = fields.Many2one(
-        related="template_id.company_id",
-        store=True,
-    )
-    name = fields.Char(
-        required=True,
-        default="/",
-    )
-    product_id = fields.Many2one(
-        comodel_name="product.product",
-        string="Product",
-    )
-    account_id = fields.Many2one(
-        comodel_name="account.account",
-        string="Account",
-    )
