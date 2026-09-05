@@ -15,14 +15,14 @@ from odoo.tools.misc import DEFAULT_SERVER_DATE_FORMAT
 class ResCompany(models.Model):
     _inherit = "res.company"
 
-    period_lock_to_date = fields.Date(
+    period_lock_date = fields.Date(
         string="Lock To Date for Non-Advisers",
         help="Only users with the 'Adviser' role can edit "
         "accounts after this date. "
         "Use it for period locking inside an open fiscal year, "
         "for example.",
     )
-    fiscalyear_lock_to_date = fields.Date(
+    fiscalyear_lock_date = fields.Date(
         string="Lock To Date",
         help="No users, including Advisers, can edit accounts after "
         "this date. Use it for fiscal year locking for example.",
@@ -30,7 +30,7 @@ class ResCompany(models.Model):
 
     def write(self, vals):
         # fiscalyear_lock_date can't be set to a prior date
-        if "fiscalyear_lock_to_date" in vals or "period_lock_to_date" in vals:
+        if "fiscalyear_lock_date" in vals or "period_lock_date" in vals:
             self._check_lock_to_dates(vals)
         return super().write(vals)
 
@@ -39,21 +39,21 @@ class ResCompany(models.Model):
 
         :param vals: The values passed to the write method.
         """
-        period_lock_to_date = vals.get("period_lock_to_date")
-        fiscalyear_lock_to_date = vals.get("fiscalyear_lock_to_date")
+        period_lock_date = vals.get("period_lock_date")
+        fiscalyear_lock_date = vals.get("fiscalyear_lock_date")
 
         next_month = datetime.now() + relativedelta(months=+1)
         days_next_month = calendar.monthrange(next_month.year, next_month.month)
         next_month = next_month.replace(day=days_next_month[1]).timetuple()
         next_month = datetime.fromtimestamp(mktime(next_month)).date()
         for company in self:
-            old_fiscalyear_lock_to_date = company.fiscalyear_lock_to_date
+            old_fiscalyear_lock_date = company.fiscalyear_lock_date
 
             # The user attempts to remove the lock date for advisors
             if (
-                old_fiscalyear_lock_to_date
-                and not fiscalyear_lock_to_date
-                and "fiscalyear_lock_to_date" in vals
+                old_fiscalyear_lock_date
+                and not fiscalyear_lock_date
+                and "fiscalyear_lock_date" in vals
                 and not self._uid == SUPERUSER_ID
             ):
                 raise ValidationError(
@@ -66,9 +66,9 @@ class ResCompany(models.Model):
             # The user attempts to set a lock date for advisors prior
             # to the previous one
             if (
-                old_fiscalyear_lock_to_date
-                and fiscalyear_lock_to_date
-                and fiscalyear_lock_to_date > old_fiscalyear_lock_to_date
+                old_fiscalyear_lock_date
+                and fiscalyear_lock_date
+                and fiscalyear_lock_date > old_fiscalyear_lock_date
             ):
                 raise ValidationError(
                     _(
@@ -78,15 +78,15 @@ class ResCompany(models.Model):
                 )
 
             # In case of no new fiscal year in vals, fallback to the oldest
-            if not fiscalyear_lock_to_date:
-                if old_fiscalyear_lock_to_date:
-                    fiscalyear_lock_to_date = old_fiscalyear_lock_to_date
+            if not fiscalyear_lock_date:
+                if old_fiscalyear_lock_date:
+                    fiscalyear_lock_date = old_fiscalyear_lock_date
                 else:
                     continue
 
             # The user attempts to set a lock date for advisors after
             # the first day of next month
-            if fiscalyear_lock_to_date < next_month:
+            if fiscalyear_lock_date < next_month:
                 raise ValidationError(
                     _(
                         "You cannot lock a period that is not finished yet. "
@@ -95,19 +95,19 @@ class ResCompany(models.Model):
                     )
                 )
 
-            # In case of no new period lock to date in vals,
+            # In case of no new period lock date in vals,
             # fallback to the one defined in the company
-            if not period_lock_to_date:
+            if not period_lock_date:
                 if company.period_lock_date:
-                    period_lock_to_date = time.strptime(
-                        company.period_lock_to_date, DEFAULT_SERVER_DATE_FORMAT
+                    period_lock_date = time.strptime(
+                        str(company.period_lock_date), DEFAULT_SERVER_DATE_FORMAT
                     )
                 else:
                     continue
 
-            # The user attempts to set a lock to date for advisors
-            # prior to the lock to date for users
-            if period_lock_to_date > fiscalyear_lock_to_date:
+            # The user attempts to set a lock date for advisors
+            # prior to the lock date for users
+            if period_lock_date > fiscalyear_lock_date:
                 raise ValidationError(
                     _(
                         "You cannot define stricter conditions on advisors "
@@ -118,19 +118,19 @@ class ResCompany(models.Model):
 
     def _validate_fiscalyear_lock(self, values):
         res = super()._validate_fiscalyear_lock(values)
-        if values.get("fiscalyear_lock_to_date"):
+        if values.get("fiscalyear_lock_date"):
             nb_draft_entries = self.env["account.move"].search(
                 [
                     ("company_id", "child_of", self.ids),
                     ("state", "=", "draft"),
-                    ("date", ">=", values["fiscalyear_lock_to_date"]),
+                    ("date", ">=", values["fiscalyear_lock_date"]),
                 ],
                 limit=1,
             )
             if nb_draft_entries:
                 raise ValidationError(
                     _(
-                        "There are still unposted entries in the period to date"
+                        "There are still unposted entries in the period"
                         " you want to lock. "
                         "You should either post or delete them."
                     )
@@ -138,21 +138,21 @@ class ResCompany(models.Model):
         return res
 
     def _get_user_fiscal_lock_to_date(self):
-        """Get the fiscal lock to date for this company depending on the user"""
+        """Get the fiscal lock date for this company depending on the user"""
         if self.user_has_groups("account.group_account_manager"):
-            lock_to_date = self.fiscalyear_lock_to_date or False
+            lock_date = self.fiscalyear_lock_date or False
         else:
-            lock_to_date = (
-                min(self.period_lock_to_date, self.fiscalyear_lock_to_date)
-                if self.period_lock_to_date and self.fiscalyear_lock_to_date
-                else self.period_lock_to_date or self.fiscalyear_lock_to_date or False
+            lock_date = (
+                min(self.period_lock_date, self.fiscalyear_lock_date)
+                if self.period_lock_date and self.fiscalyear_lock_date
+                else self.period_lock_date or self.fiscalyear_lock_date or False
             )
         if self.parent_id:
             # We need to use sudo, since we might not have access to a parent company.
-            parent_lock_to_date = self.sudo().parent_id._get_user_fiscal_lock_to_date()
-            lock_to_date = (
-                min(lock_to_date, parent_lock_to_date)
-                if lock_to_date and parent_lock_to_date
-                else lock_to_date or parent_lock_to_date or False
+            parent_lock_date = self.sudo().parent_id._get_user_fiscal_lock_to_date()
+            lock_date = (
+                min(lock_date, parent_lock_date)
+                if lock_date and parent_lock_date
+                else lock_date or parent_lock_date or False
             )
-        return lock_to_date
+        return lock_date

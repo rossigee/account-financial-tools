@@ -15,13 +15,13 @@ class AccountUpdateLockToDate(models.TransientModel):
         required=True,
         default=lambda self: self.env.user.company_id,
     )
-    period_lock_to_date = fields.Date(
+    period_lock_date = fields.Date(
         string="Lock To Date for Non-Advisers",
         help="Only users with the 'Adviser' role can edit accounts after "
         "and inclusive of this date. Use it for period locking inside an "
         "open fiscal year, for example.",
     )
-    fiscalyear_lock_to_date = fields.Date(
+    fiscalyear_lock_date = fields.Date(
         string="Lock To Date",
         help="No users, including Advisers, can edit accounts after and "
         "inclusive of this date. Use it for fiscal year locking for "
@@ -35,8 +35,8 @@ class AccountUpdateLockToDate(models.TransientModel):
         res.update(
             {
                 "company_id": company.id,
-                "period_lock_to_date": company.period_lock_to_date,
-                "fiscalyear_lock_to_date": company.fiscalyear_lock_to_date,
+                "period_lock_date": company.period_lock_date,
+                "fiscalyear_lock_date": company.fiscalyear_lock_date,
             }
         )
         return res
@@ -52,7 +52,7 @@ class AccountUpdateLockToDate(models.TransientModel):
         self._check_execute_allowed()
         self.company_id.sudo().write(
             {
-                "period_lock_to_date": self.period_lock_to_date,
-                "fiscalyear_lock_to_date": self.fiscalyear_lock_to_date,
+                "period_lock_date": self.period_lock_date,
+                "fiscalyear_lock_date": self.fiscalyear_lock_date,
             }
         )
