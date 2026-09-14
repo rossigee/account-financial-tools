@@ -4,10 +4,13 @@ on:
   pull_request:
     branches:
       - "17.0*"
+      - "18.0*"
   push:
     branches:
       - "17.0"
       - "17.0-ocabot-*"
+      - "18.0"
+      - "18.0-ocabot-*"
 
 jobs:
   unreleased-deps:
@@ -41,6 +44,9 @@ jobs:
           - container: ghcr.io/oca/oca-ci/py3.10-odoo17.0:latest
             include: "account_journal_restrict_mode"
             name: test with Odoo
+          - container: ghcr.io/oca/oca-ci/py3.10-odoo17.0:latest
+            include: "account_bank_statement_merge"
+            name: test with Odoo
           - container: ghcr.io/oca/oca-ci/py3.10-ocb17.0:latest
             include: "account_move_name_sequence"
             name: test with OCB
@@ -49,11 +55,15 @@ jobs:
             include: "account_journal_restrict_mode"
             name: test with OCB
             makepot: "true"
+          - container: ghcr.io/oca/oca-ci/py3.10-ocb17.0:latest
+            include: "account_bank_statement_merge"
+            name: test with OCB
+            makepot: "true"
           - container: ghcr.io/oca/oca-ci/py3.10-odoo17.0:latest
-            exclude: "account_move_name_sequence,account_journal_restrict_mode"
+            exclude: "account_move_name_sequence,account_journal_restrict_mode,account_bank_statement_merge"
             name: test with Odoo
           - container: ghcr.io/oca/oca-ci/py3.10-ocb17.0:latest
-            exclude: "account_move_name_sequence,account_journal_restrict_mode"
+            exclude: "account_move_name_sequence,account_journal_restrict_mode,account_bank_statement_merge"
             name: test with OCB
             makepot: "true"
     services:
